@@ -5,82 +5,179 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games</title>
     <link rel="icon" href="https://legu.veho.com.au/legu-rs.png">
+
     <style>
+        @font-face {
+            font-family: "AliceHand";
+            src: url("https://legu.veho.com.au/fonts/alicehandwriting.ttf") format("truetype");
+        }
+
         :root {
-            --bg-color: #1a1f1a;
-            --surface-color: #222822;
-            --primary-green: #3fdc85;
-            --text-main: #b7c8b7;
+            --bg: #0b0d0b;
+            --green: #3fdc85;
+            --text: #b7c8b7;
             --text-dim: #6f7a6f;
-            --button-bg: #2c332c;
-            --button-hover: #3a463a;
-            --font-family: sans-serif;
+            --card: #161c16;
+            --card-hover: #1f261f;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: var(--font-family);
+            background: var(--bg);
+            color: var(--text);
+            font-family: "AliceHand", sans-serif;
             min-height: 100vh;
+            padding: 3rem 1rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 2rem;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        canvas#particles {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
         }
 
         h1 {
-            font-size: 3rem;
-            color: var(--primary-green);
-            margin-bottom: 1.5rem;
+            font-size: 4rem;
+            color: var(--green);
+            margin-bottom: 2rem;
             text-transform: lowercase;
+            z-index: 2;
+            filter: drop-shadow(0 0 12px rgba(63,220,133,0.25));
         }
 
-        .list {
+        .grid {
             width: 100%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+            z-index: 2;
         }
 
-        .item {
-            background-color: var(--surface-color);
-            padding: 1rem;
-            border-radius: 6px;
+        .card {
+            background: var(--card);
+            padding: 1.4rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.15s ease, background 0.2s ease;
         }
 
-        .item a {
-            color: var(--primary-green);
+        .card:hover {
+            background: var(--card-hover);
+            transform: translateY(-4px);
+        }
+
+        .card a {
+            color: var(--green);
+            font-size: 1.3rem;
             text-decoration: none;
-            font-size: 1.2rem;
-        }
-
-        .item p {
-            color: var(--text-dim);
-            margin-top: 0.3rem;
         }
     </style>
 </head>
+
 <body>
+
+<canvas id="particles"></canvas>
 
 <h1>games</h1>
 
-<div class="list" id="list"></div>
+<div class="grid" id="grid"></div>
 
 <script>
-    fetch("/jugar/list.json")
+    function formatName(name) {
+        return name
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    fetch("https://api.github.com/repos/cuteangryduck-stack/legu-rs/contents/jugar/play")
         .then(r => r.json())
-        .then(data => {
-            const list = document.getElementById("list");
-            data.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "item";
-                div.innerHTML = `<a href="${item.url}">${item.name}</a><p>${item.desc}</p>`;
-                list.appendChild(div);
-            });
+        .then(items => {
+            const grid = document.getElementById("grid");
+
+            items
+                .filter(item => item.type === "dir")
+                .forEach(item => {
+                    const name = formatName(item.name);
+                    const url = `/jugar/play/${item.name}/index.html`;
+
+                    const div = document.createElement("div");
+                    div.className = "card";
+                    div.innerHTML = `<a href="${url}">${name}</a>`;
+                    grid.appendChild(div);
+                });
         });
+
+    const canvas = document.getElementById("particles");
+    const ctx = canvas.getContext("2d");
+
+    let w, h;
+    function resize() {
+        w = canvas.width = innerWidth;
+        h = canvas.height = innerHeight;
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    const particles = [];
+    for (let i = 0; i < 90; i++) {
+        particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            s: Math.random() * 2 + 1,
+            vx: (Math.random() - 0.5) * 0.4,
+            vy: (Math.random() - 0.5) * 0.4
+        });
+    }
+
+    const mouse = { x: null, y: null };
+    addEventListener("mousemove", e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    function draw() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "rgba(63,220,133,0.9)";
+        ctx.shadowColor = "rgba(63,220,133,0.8)";
+        ctx.shadowBlur = 8;
+
+        for (let p of particles) {
+            const dx = p.x - mouse.x;
+            const dy = p.y - mouse.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < 130) {
+                p.x += dx / dist * 0.7;
+                p.y += dy / dist * 0.7;
+            }
+
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0) p.x = w;
+            if (p.x > w) p.x = 0;
+            if (p.y < 0) p.y = h;
+            if (p.y > h) p.y = 0;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
 </script>
 
 </body>
