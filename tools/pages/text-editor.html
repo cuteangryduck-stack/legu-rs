@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legu Editor</title>
+    <link rel="icon" href="https://legu.veho.com.au/legu-rs.png">
+    <style>
+        :root {
+            --bg-color: #1a1f1a;
+            --surface-color: #222822;
+            --primary-green: #3fdc85;
+            --text-main: #b7c8b7;
+            --text-dim: #6f7a6f;
+            --button-bg: #2c332c;
+            --button-hover: #3a463a;
+            --accent: #3f8c5a;
+        }
+
+        @font-face {
+            font-family: "AliceHand";
+            src: url("/fonts/alicehandwriting.ttf") format("truetype");
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--surface-color);
+        }
+
+        .title {
+            font-size: 1.4rem;
+            color: var(--primary-green);
+            text-transform: lowercase;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--text-main);
+            border: none;
+            padding: 0.4rem 0.9rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem 1.5rem;
+            background-color: #1f241f;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 0.35rem 0.7rem;
+            border-radius: 4px 4px 0 0;
+            background-color: #252c25;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .tab.active {
+            background-color: var(--surface-color);
+            color: var(--primary-green);
+        }
+
+        .tab span {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tab-close {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .tab-close:hover {
+            color: var(--primary-green);
+        }
+
+        .editor-wrap {
+            flex: 1;
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            margin-top: 0.5rem;
+            background-color: var(--surface-color);
+            color: var(--text-main);
+            border: 1px solid #303830;
+            border-radius: 4px;
+            padding: 0.75rem;
+            resize: none;
+            font-family: "AliceHand", monospace;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .status-bar {
+            margin-top: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            margin-right: 0.4rem;
+            display: inline-block;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="title">legu editor</div>
+    <div class="controls">
+        <button id="newTab">New tab</button>
+        <button id="renameTab">Rename</button>
+    </div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="editor-wrap">
+    <textarea id="editor"></textarea>
+    <div class="status-bar">
+        <div class="status-left">
+            <span class="status-dot" id="saveDot"></span>
+            <span id="statusText">Saved</span>
+        </div>
+        <div id="infoText"></div>
+    </div>
+</div>
+
+<script>
+    const tabsEl = document.getElementById("tabs");
+    const editorEl = document.getElementById("editor");
+    const newTabBtn = document.getElementById("newTab");
+    const renameTabBtn = document.getElementById("renameTab");
+    const saveDot = document.getElementById("saveDot");
+    const statusText = document.getElementById("statusText");
+    const infoText = document.getElementById("infoText");
+
+    const STORAGE_TABS = "legu_editor_tabs";
+    const STORAGE_ACTIVE = "legu_editor_active";
+
+    let tabs = [];
+    let activeId = null;
+    let saveTimeout = null;
+
+    function loadState() {
+        const storedTabs = localStorage.getItem(STORAGE_TABS);
+        const storedActive = localStorage.getItem(STORAGE_ACTIVE);
+        if (storedTabs) {
+            tabs = JSON.parse(storedTabs);
+        } else {
+            const id = Date.now().toString();
+            tabs = [{ id, name: "Untitled", created: Date.now() }];
+            localStorage.setItem("legu_editor_content_" + id, "");
+        }
+        activeId = storedActive && tabs.find(t => t.id === storedActive) ? storedActive : tabs[0].id;
+        renderTabs();
+        loadActiveContent();
+    }
+
+    function saveTabs() {
+        localStorage.setItem(STORAGE_TABS, JSON.stringify(tabs));
+        localStorage.setItem(STORAGE_ACTIVE, activeId);
+    }
+
+    function renderTabs() {
+        tabsEl.innerHTML = "";
+        tabs.forEach(tab => {
+            const div = document.createElement("div");
+            div.className = "tab" + (tab.id === activeId ? " active" : "");
+            div.dataset.id = tab.id;
+            const span = document.createElement("span");
+            span.textContent = tab.name;
+            const close = document.createElement("span");
+            close.textContent = "×";
+            close.className = "tab-close";
+            div.appendChild(span);
+            div.appendChild(close);
+            tabsEl.appendChild(div);
+        });
+        infoText.textContent = tabs.length + " tab" + (tabs.length === 1 ? "" : "s");
+    }
+
+    function loadActiveContent() {
+        const content = localStorage.getItem("legu_editor_content_" + activeId) || "";
+        editorEl.value = content;
+        setSaved(true);
+    }
+
+    function setSaved(saved) {
+        if (saved) {
+            saveDot.style.backgroundColor = "#3f8c5a";
+            statusText.textContent = "Saved";
+        } else {
+            saveDot.style.backgroundColor = "#8c5a3f";
+            statusText.textContent = "Editing…";
+        }
+    }
+
+    function saveContent() {
+        const key = "legu_editor_content_" + activeId;
+        localStorage.setItem(key, editorEl.value);
+        setSaved(true);
+    }
+
+    function scheduleSave() {
+        setSaved(false);
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveContent, 400);
+    }
+
+    function createTab() {
+        const id = Date.now().toString();
+        const name = "Untitled " + (tabs.length + 1);
+        tabs.push({ id, name, created: Date.now() });
+        localStorage.setItem("legu_editor_content_" + id, "");
+        activeId = id;
+        saveTabs();
+        renderTabs();
+        loadActiveContent();
+    }
+
+    function closeTab(id) {
+        if (tabs.length === 1) return;
+        const idx = tabs.findIndex(t => t.id === id);
+        if (idx === -1) return;
+        tabs.splice(idx, 1);
+        localStorage.removeItem("legu_editor_content_" + id);
+        if (activeId === id) {
+            activeId = tabs[Math.max(0, idx - 1)].id;
+        }
+        saveTabs();
+        renderTabs();
+        loadActiveContent();
+    }
+
+    function renameActive() {
+        const tab = tabs.find(t => t.id === activeId);
+        if (!tab) return;
+        const name = prompt("Tab name", tab.name);
+        if (!name) return;
+        tab.name = name;
+        saveTabs();
+        renderTabs();
+    }
+
+    tabsEl.addEventListener("click", e => {
+        const tabEl = e.target.closest(".tab");
+        if (!tabEl) return;
+        const id = tabEl.dataset.id;
+        if (e.target.classList.contains("tab-close")) {
+            closeTab(id);
+        } else {
+            if (id !== activeId) {
+                activeId = id;
+                saveTabs();
+                renderTabs();
+                loadActiveContent();
+            }
+        }
+    });
+
+    editorEl.addEventListener("input", scheduleSave);
+    newTabBtn.addEventListener("click", createTab);
+    renameTabBtn.addEventListener("click", renameActive);
+
+    loadState();
+</script>
+
+</body>
+</html>
