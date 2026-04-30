@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legu Groq Minichat</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #d8e8d8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #2e3b2e;
+        }
+        #chat-container {
+            width: 95%;
+            max-width: 700px;
+            height: 85vh;
+            background: #eef5ee;
+            display: flex;
+            flex-direction: column;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #c0d0c0;
+        }
+        header {
+            padding: 15px;
+            background: #b8ccb8;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #a8baa8;
+        }
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f0f7f0;
+        }
+        .message {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 15px;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user {
+            background-color: #4a7c4a;
+            color: #f0f7f0;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .ai {
+            background-color: #dae5da;
+            color: #2e3b2e;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #c8d8c8;
+        }
+        #input-area {
+            display: flex;
+            padding: 15px;
+            background: #e0eee0;
+            border-top: 1px solid #c8d8c8;
+            gap: 10px;
+        }
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #b0c0b0;
+            border-radius: 8px;
+            outline: none;
+            background: #f7faf7;
+            color: #2e3b2e;
+        }
+        #send-btn {
+            padding: 10px 25px;
+            background: #4a7c4a;
+            color: #f0f7f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #send-btn:disabled {
+            background: #9ab49a;
+        }
+        footer {
+            padding: 8px;
+            font-size: 11px;
+            color: #7a8a7a;
+            text-align: center;
+            background: #e0eee0;
+            border-top: 1px solid #c8d8c8;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <header>Legu Groq Minichat</header>
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Enter message..." autocomplete="off">
+        <button id="send-btn">Send</button>
+    </div>
+    <footer id="key-display">Loading API Key...</footer>
+</div>
+
+<script>
+    let API_KEY = "";
+    const MODEL = "llama-3.3-70b-versatile";
+    
+    const messagesContainer = document.getElementById('messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const keyDisplay = document.getElementById('key-display');
+
+    async function loadApiKey() {
+        try {
+            const response = await fetch('api.txt');
+            const key = await response.text();
+            API_KEY = key.trim();
+            keyDisplay.innerText = `Current API (public): ${API_KEY}`;
+        } catch (err) {
+            keyDisplay.innerText = "Error: Could not load api.txt";
+        }
+    }
+
+    loadApiKey();
+
+    function appendMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.innerText = text;
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || !API_KEY) return;
+
+        appendMessage('user', text);
+        userInput.value = '';
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+
+        try {
+            const response = await fetch("https://groq.com", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: MODEL,
+                    messages: [{ role: "user", content: text }]
+                })
+            });
+
+            const data = await response.json();
+            const aiResponse = data.choices[0].message.content;
+            appendMessage('ai', aiResponse);
+        } catch (error) {
+            appendMessage('ai', "Status: Error connecting to API.");
+        } finally {
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+</script>
+
+</body>
+</html>
