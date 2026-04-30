@@ -4,23 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 • Legu</title>
-    <link rel="icon" href="https://legu.veho.com.au/legu-rs.png">
+    <link rel="icon" id="favicon" href="">
 
     <style>
-        @font-face {
-            font-family: "AliceHand";
-            src: url("https://legu.veho.com.au/fonts/alicehandwriting.ttf") format("truetype");
-        }
-
-        :root {
-            --bg: #0b0d0b;
-            --green: #3fdc85;
-            --green-dim: #2a7a3a;
-            --text: #b2c4b2;
-            --text-dim: #5d685d;
-            --btn: #1a1f1a;
-            --btn-hover: #262e26;
-        }
+        /* Initial hide to prevent unstyled flash */
+        body { opacity: 0; transition: opacity 0.3s ease; }
 
         * {
             margin: 0;
@@ -31,7 +19,7 @@
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: "AliceHand", sans-serif;
+            font-family: var(--font-name), sans-serif;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -58,7 +46,7 @@
             left: 50%;
             width: 60vw;
             height: 60vw;
-            background: radial-gradient(circle, rgba(63,220,133,0.1), transparent 75%);
+            background: radial-gradient(circle, var(--glow-color), transparent 75%);
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 1;
@@ -72,9 +60,9 @@
 
         .code {
             font-size: 7rem;
-            color: var(--green);
+            color: var(--primary);
             letter-spacing: -0.03em;
-            filter: drop-shadow(0 0 20px rgba(63,220,133,0.3));
+            filter: drop-shadow(0 0 20px var(--shadow-color));
             margin-bottom: 1rem;
         }
 
@@ -130,76 +118,92 @@
         <a class="btn" href="/">Return Home</a>
     </main>
 
-    <footer>
-        Akon'Vess • Legu
+    <footer id="footer-text">
+        Initializing...
     </footer>
 
     <script>
-        const canvas = document.getElementById("particles");
-        const ctx = canvas.getContext("2d");
+        async function init() {
+            try {
+                // 1. Fetch the central configuration
+                const res = await fetch('/settings.json');
+                const cfg = await res.json();
 
-        let w, h;
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
+                // 2. Apply Dynamic Styles
+                const root = document.documentElement;
+                root.style.setProperty('--bg', cfg.colors.background);
+                root.style.setProperty('--primary', cfg.colors.primary);
+                root.style.setProperty('--text', cfg.colors.text);
+                root.style.setProperty('--text-dim', cfg.colors.textDim);
+                root.style.setProperty('--btn', cfg.colors.button);
+                root.style.setProperty('--btn-hover', cfg.colors.buttonHover);
+                root.style.setProperty('--glow-color', cfg.colors.glow);
+                root.style.setProperty('--shadow-color', cfg.colors.shadow);
+                root.style.setProperty('--font-name', cfg.font.name);
+
+                // 3. Inject Custom Font
+                const fontStyle = document.createElement('style');
+                fontStyle.appendChild(document.createTextNode(`
+                    @font-face {
+                        font-family: "${cfg.font.name}";
+                        src: url("${cfg.font.path}") format("${cfg.font.type}");
+                    }
+                `));
+                document.head.appendChild(fontStyle);
+
+                // 4. Set Content
+                document.getElementById('favicon').href = cfg.content.favicon;
+                document.getElementById('footer-text').innerText = `${cfg.content.author} • ${cfg.content.siteName}`;
+                
+                // 5. Reveal Page & Start Animations
+                document.body.style.opacity = "1";
+                startParticles(cfg.colors.primary);
+
+            } catch (error) {
+                console.error("Failed to load settings:", error);
+            }
         }
-        window.addEventListener("resize", resize);
-        resize();
 
-        const particles = [];
-        const count = 90;
-        const mouse = { x: null, y: null };
+        function startParticles(pColor) {
+            const canvas = document.getElementById("particles");
+            const ctx = canvas.getContext("2d");
+            let w, h;
+            function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+            window.addEventListener("resize", resize);
+            resize();
 
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                size: Math.random() * 2 + 1,
-                vx: (Math.random() - 0.5) * 0.4,
-                vy: (Math.random() - 0.5) * 0.4
-            });
-        }
-
-        document.addEventListener("mousemove", e => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        });
-
-        function draw() {
-            ctx.clearRect(0, 0, w, h);
-
-            ctx.fillStyle = "rgba(63,220,133,0.9)";
-            ctx.shadowColor = "rgba(63,220,133,0.8)";
-            ctx.shadowBlur = 8;
-
-            for (let p of particles) {
-                const dx = p.x - mouse.x;
-                const dy = p.y - mouse.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-
-                if (dist < 130) {
-                    p.x += dx / dist * 0.7;
-                    p.y += dy / dist * 0.7;
-                }
-
-                p.x += p.vx;
-                p.y += p.vy;
-
-                if (p.x < 0) p.x = w;
-                if (p.x > w) p.x = 0;
-                if (p.y < 0) p.y = h;
-                if (p.y > h) p.y = 0;
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
+            const particles = [];
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: Math.random() * w, y: Math.random() * h,
+                    size: Math.random() * 2 + 1,
+                    vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4
+                });
             }
 
-            requestAnimationFrame(draw);
+            const mouse = { x: null, y: null };
+            document.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = pColor;
+                ctx.shadowColor = pColor;
+                ctx.shadowBlur = 8;
+                for (let p of particles) {
+                    const dx = p.x - mouse.x, dy = p.y - mouse.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 130) { p.x += dx / dist * 0.7; p.y += dy / dist * 0.7; }
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
         }
 
-        draw();
+        init();
     </script>
-
 </body>
 </html>
