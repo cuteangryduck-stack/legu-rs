@@ -6,7 +6,6 @@
     <title>Minichat</title>
     <link rel="icon" id="favicon" href="">
     <style>
-        /* Initial hide to prevent flash of unstyled content */
         body { opacity: 0; transition: opacity 0.3s ease; margin: 0; }
         
         #chat-body {
@@ -66,7 +65,6 @@
     const MODEL = "llama-3.3-70b-versatile";
 
     async function init() {
-        // Fetch theme from domain root
         const res = await fetch('/settings.json');
         const cfg = await res.json();
         
@@ -87,19 +85,17 @@
         document.getElementById('favicon').href = cfg.content.favicon;
         document.body.style.opacity = "1";
         
-        // Load API key from THIS directory
         loadApiKey();
     }
 
     async function loadApiKey() {
         try {
-            // FIXED: Using ./api.txt to stay within the /tools/ directory
             const response = await fetch('./api.txt');
             const encodedKey = await response.text();
             API_KEY = atob(encodedKey.trim());
             document.getElementById('key-display').innerText = `Current API (public): ${API_KEY}`;
         } catch (err) { 
-            document.getElementById('key-display').innerText = "Error: api.txt not found in this folder."; 
+            document.getElementById('key-display').innerText = "Error: api.txt not found."; 
         }
     }
 
