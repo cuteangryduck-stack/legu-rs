@@ -1,9 +1,9 @@
 {
   "content": {
     "siteName": "legu",
-    "status": "Ideas are more powerful than guns. We would not let our enemies have guns, why should we let them have ideas. - Joseph Stalin",
+    "status": "Everybody has a right to be stupid, but some people abuse the privilege. - Joseph Stalin",
     "author": "Akon'Vess",
-    "favicon": "https://legu.veho.com.au/legu-rs.png"
+    "favicon": "https://veho.com.au"
   },
   "font": {
     "name": "Carmilla",
@@ -11,23 +11,23 @@
     "type": "opentype"
   },
   "colors": {
-    "background": "#0b0d0b",
-    "surface": "#151915",
-    "primary": "#3fdc85",
-    "primaryDim": "#2a7a3a",
-    "text": "#b2c4b2",
-    "textDim": "#5d685d",
-    "button": "#1a1f1a",
-    "buttonHover": "#262e26",
-    "glow": "rgba(63,220,133,0.09)",
-    "shadow": "rgba(63,220,133,0.25)"
+    "background": "#122012",
+    "surface": "#243a24",
+    "primary": "#8fff00",
+    "primaryDim": "#5cb85c",
+    "text": "#ffffff",
+    "textDim": "#b0ccb0",
+    "button": "#2e4a2e",
+    "buttonHover": "#3d633d",
+    "glow": "rgba(143, 255, 0, 0.2)",
+    "shadow": "rgba(0, 0, 0, 0.4)"
   },
   "chatColors": {
-    "background": "#d8e8d8",
-    "surface": "#eef5ee",
-    "primary": "#4a7c4a",
-    "primaryDim": "#b8ccb8",
-    "text": "#2e3b2e",
-    "textDim": "#7a8a7a"
+    "background": "#f0f7f0",
+    "surface": "#ffffff",
+    "primary": "#2e5c2e",
+    "primaryDim": "#a3c2a3",
+    "text": "#1a241a",
+    "textDim": "#5c705c"
   }
 }
